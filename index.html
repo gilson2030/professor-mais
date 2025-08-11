@@ -8,37 +8,49 @@
   <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
 </head>
 <body>
-  <!-- LOGIN (rota: #/login) -->
-  <div id="login-screen" class="screen centered hidden">
+  <!-- LOGIN (primeira tela) -->
+  <div id="login-screen" class="screen centered">
     <div class="card login-card">
       <div class="logo-big">Professor<span class="plus">+</span></div>
       <h2 class="mt-16">Bem-vindo(a)!</h2>
+
       <button class="btn btn-google mt-16" id="btnLoginGoogle">
         <span class="g">G</span> Entrar com Google
       </button>
-      <button class="btn btn-primary mt-12" id="btnLoginEmail">
-        Entrar com E-mail
-      </button>
+
+      <div class="form mt-16">
+        <span>E-mail</span>
+        <input type="email" id="inpEmail" placeholder="seu@email.com" />
+      </div>
+      <div class="form">
+        <span>Senha</span>
+        <input type="password" id="inpPass" placeholder="••••••••" />
+      </div>
+      <div class="row-actions" style="justify-content:center; gap:10px">
+        <button class="btn btn-primary" id="btnLoginEmail">Entrar com E-mail</button>
+        <button class="btn btn-outline" id="btnSignupEmail">Criar conta</button>
+      </div>
+      <div id="authMsg" class="muted mt-12" style="min-height:20px;text-align:center"></div>
     </div>
   </div>
 
-  <!-- APP (somente após login) -->
+  <!-- APP (após login) -->
   <div id="app" class="app hidden">
     <aside class="sidebar" id="sidebar">
       <div class="sidebar-top">
-        <div class="profile-name" id="perfilNome">Prof. Gilson</div>
+        <div class="profile-name" id="perfilNome">Professor</div>
         <button class="btn btn-outline xs" id="btnEditarPerfil">Editar Perfil</button>
       </div>
-      <nav class="nav">
-        <a href="#/dashboard"   class="nav-item" data-route><span class="ico">🏠</span> Início</a>
-        <a href="#/turmas"      class="nav-item" data-route><span class="ico">👤</span> Turmas</a>
-        <a href="#/alunos"      class="nav-item" data-route><span class="ico">📒</span> Alunos</a>
-        <a href="#/atividades"  class="nav-item" data-route><span class="ico">✅</span> Atividades</a>
-        <a href="#/chamada"     class="nav-item" data-route><span class="ico">📝</span> Chamada</a>
-        <a href="#/relatorios"  class="nav-item" data-route><span class="ico">📊</span> Relatórios</a>
-        <a href="#/estatisticas"class="nav-item" data-route><span class="ico">👤</span> Estatísticas</a>
-        <a href="#/perfil"      class="nav-item" data-route><span class="ico">⚙️</span> Perfil</a>
-        <a href="#/config"      class="nav-item" data-route><span class="ico">❓</span> Configurações</a>
+      <nav class="nav" id="nav">
+        <a href="#/dashboard"    class="nav-item" data-route><span class="ico">🏠</span> Início</a>
+        <a href="#/turmas"       class="nav-item" data-route><span class="ico">👥</span> Turmas</a>
+        <a href="#/alunos"       class="nav-item" data-route><span class="ico">📒</span> Alunos</a>
+        <a href="#/atividades"   class="nav-item" data-route><span class="ico">✅</span> Atividades</a>
+        <a href="#/chamada"      class="nav-item" data-route><span class="ico">📝</span> Chamada</a>
+        <a href="#/relatorios"   class="nav-item" data-route><span class="ico">📊</span> Relatórios</a>
+        <a href="#/estatisticas" class="nav-item" data-route><span class="ico">📈</span> Estatísticas</a>
+        <a href="#/perfil"       class="nav-item" data-route><span class="ico">👤</span> Perfil</a>
+        <a href="#/config"       class="nav-item" data-route><span class="ico">⚙️</span> Configurações</a>
       </nav>
     </aside>
 
@@ -55,22 +67,35 @@
     </div>
   </div>
 
-  <!-- Templates de telas -->
+  <!-- Templates -->
   <template id="tpl-dashboard">
     <section class="section">
-      <h1>Olá, Prof. Gilson!</h1>
+      <h1>Olá, <span id="dashNome">Professor</span>!</h1>
+
       <div class="kpis">
         <div class="kpi-card"><div class="kpi-title">Total de Turmas</div><div class="kpi-value" id="kpiTurmas">0</div></div>
         <div class="kpi-card"><div class="kpi-title">Total de Alunos</div><div class="kpi-value" id="kpiAlunos">0</div></div>
         <div class="kpi-card"><div class="kpi-title">Atividades Hoje</div><div class="kpi-value" id="kpiAtividadesHoje">0</div></div>
       </div>
+
       <div class="grid-3 mt-16">
         <a class="tile" href="#/turmas"><div class="tile-ico">🏠</div><div class="tile-title">Turmas</div></a>
         <a class="tile" href="#/atividades"><div class="tile-ico">📋</div><div class="tile-title">Atividades</div></a>
         <a class="tile" href="#/relatorios"><div class="tile-ico">📊</div><div class="tile-title">Relatórios</div></a>
       </div>
-      <div class="mt-20">
-        <a class="btn btn-success" href="#/nova-turma" id="btnAtalhoNovaTurma">Nova Turma</a>
+
+      <!-- Horários do professor -->
+      <div class="card mt-20">
+        <div class="section-header">
+          <h3>Meus horários de aula</h3>
+          <button class="btn btn-success" id="btnNovoHorario">+ Novo horário</button>
+        </div>
+        <div class="table-responsive">
+          <table class="table" id="tblHorarios">
+            <thead><tr><th>Dia</th><th>Início</th><th>Fim</th><th>Turma</th><th>Disciplina</th><th>Ações</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
       </div>
     </section>
   </template>
@@ -83,6 +108,16 @@
       </div>
       <h1>Turmas</h1>
       <div id="listaTurmas" class="list list-turmas"></div>
+    </section>
+  </template>
+
+  <template id="tpl-alunos">
+    <section class="section">
+      <div class="section-header">
+        <div class="logo small">Professor<span class="plus">+</span></div>
+      </div>
+      <h1>Alunos por turma</h1>
+      <div id="wrapAlunosPorTurma" class="list"></div>
     </section>
   </template>
 
@@ -105,11 +140,26 @@
           <button class="btn btn-success mb-12" id="btnNovoAluno">+ Novo Aluno</button>
           <div id="listaAlunos" class="list"></div>
         </div>
+
         <div class="tabpane" id="paneAtividades">
-          <button class="btn btn成功 mb-12" id="btnNovaAtividade">+ Nova Atividade</button>
-          <div id="listaAtividades" class="list"></div>
+          <div class="filters">
+            <label>Bimestre
+              <select id="selBimAtiv">
+                <option value="1">1º</option><option value="2">2º</option>
+                <option value="3">3º</option><option value="4">4º</option>
+              </select>
+            </label>
+            <button class="btn btn-success" id="btnNovaAtividade">+ Nova Atividade</button>
+          </div>
+          <div id="listaAtividades" class="list mt-12"></div>
         </div>
+
         <div class="tabpane" id="paneChamada">
+          <div class="filters">
+            <label>Data
+              <input type="date" id="chamadaDate" />
+            </label>
+          </div>
           <div id="chamadaData" class="muted mb-8"></div>
           <div id="listaChamada" class="list"></div>
           <button class="btn btn-success mt-16" id="btnSalvarChamada">Salvar Chamada</button>
@@ -125,8 +175,21 @@
         <div class="user-mini" id="lancarUser"></div>
       </div>
       <h1>Lançar Notas</h1>
+      <div class="filters">
+        <label>Bimestre
+          <select id="selBimNotas">
+            <option value="1">1º</option><option value="2">2º</option>
+            <option value="3">3º</option><option value="4">4º</option>
+          </select>
+        </label>
+      </div>
       <div class="muted mb-12" id="contextoLancar"></div>
-      <div id="listaLancar" class="list list-grades"></div>
+      <div class="table-responsive">
+        <table class="table" id="tblNotas">
+          <thead><tr><th>#</th><th>Aluno</th><th>Nota</th><th>Média (bim.)</th></tr></thead>
+          <tbody id="tbodyNotas"></tbody>
+        </table>
+      </div>
       <button class="btn btn-success mt-16" id="btnSalvarNotas">Salvar Notas</button>
     </section>
   </template>
@@ -135,10 +198,10 @@
     <section class="section">
       <div class="section-header">
         <div class="logo small">Professor<span class="plus">+</span></div>
-        <a class="btn btn-success" href="#/nova-atividade" id="btnNovaAtividadeGlobal">Nova Atividade</a>
+        <button class="btn btn-success" id="btnNovaAtividadeGlobal">Nova Atividade</button>
       </div>
       <h1>Atividades</h1>
-      <div id="atividadesGlobais" class="list"></div>
+      <div class="list" id="atividadesGlobais"></div>
     </section>
   </template>
 
@@ -172,13 +235,32 @@
   </template>
 
   <template id="tpl-estatisticas">
-    <section class="section"><h1>Estatísticas</h1><p class="muted">Resumo geral (demo).</p></section>
+    <section class="section">
+      <div class="section-header">
+        <div class="logo small">Professor<span class="plus">+</span></div>
+      </div>
+      <h1>Estatísticas</h1>
+      <div class="filters">
+        <label>Bimestre
+          <select id="selBimStats">
+            <option value="1">1º</option><option value="2">2º</option>
+            <option value="3">3º</option><option value="4">4º</option>
+          </select>
+        </label>
+      </div>
+      <div class="grid-2 mt-16">
+        <div class="card"><h3>Turmas com mais faltas</h3><div id="chartFaltas"></div></div>
+        <div class="card"><h3>Melhores médias por turma (bim.)</h3><div id="chartBestMedias"></div></div>
+      </div>
+    </section>
   </template>
 
   <template id="tpl-perfil">
     <section class="section">
       <h1>Perfil</h1>
-      <label class="form"><span>Seu nome</span><input type="text" id="inpNome" placeholder="Prof. Gilson"/></label>
+      <label class="form"><span>Seu nome (exibição)</span>
+        <input type="text" id="inpNome" placeholder="Professor" />
+      </label>
       <button class="btn btn-success mt-12" id="btnSalvarPerfil">Salvar</button>
     </section>
   </template>
@@ -186,10 +268,12 @@
   <template id="tpl-config">
     <section class="section">
       <h1>Configurações</h1>
-      <button class="btn btn-outline" id="btnReset">Limpar dados (localStorage)</button>
+      <button class="btn btn-outline" id="btnReset">Limpar cache local (não apaga o Firebase)</button>
     </section>
   </template>
 
-  <script src="app.js"></script>
+  <!-- Scripts (módulos) -->
+  <script type="module" src="db.js"></script>
+  <script type="module" src="app.js"></script>
 </body>
 </html>
