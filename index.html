@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Professor+</title>
+  <link rel="stylesheet" href="styles.css" />
+  <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+</head>
+<body>
+  <!-- LOGIN (rota: #/login) -->
+  <div id="login-screen" class="screen centered hidden">
+    <div class="card login-card">
+      <div class="logo-big">Professor<span class="plus">+</span></div>
+      <h2 class="mt-16">Bem-vindo(a)!</h2>
+      <button class="btn btn-google mt-16" id="btnLoginGoogle">
+        <span class="g">G</span> Entrar com Google
+      </button>
+      <button class="btn btn-primary mt-12" id="btnLoginEmail">
+        Entrar com E-mail
+      </button>
+    </div>
+  </div>
+
+  <!-- APP (somente após login) -->
+  <div id="app" class="app hidden">
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-top">
+        <div class="profile-name" id="perfilNome">Prof. Gilson</div>
+        <button class="btn btn-outline xs" id="btnEditarPerfil">Editar Perfil</button>
+      </div>
+      <nav class="nav">
+        <a href="#/dashboard"   class="nav-item" data-route><span class="ico">🏠</span> Início</a>
+        <a href="#/turmas"      class="nav-item" data-route><span class="ico">👤</span> Turmas</a>
+        <a href="#/alunos"      class="nav-item" data-route><span class="ico">📒</span> Alunos</a>
+        <a href="#/atividades"  class="nav-item" data-route><span class="ico">✅</span> Atividades</a>
+        <a href="#/chamada"     class="nav-item" data-route><span class="ico">📝</span> Chamada</a>
+        <a href="#/relatorios"  class="nav-item" data-route><span class="ico">📊</span> Relatórios</a>
+        <a href="#/estatisticas"class="nav-item" data-route><span class="ico">👤</span> Estatísticas</a>
+        <a href="#/perfil"      class="nav-item" data-route><span class="ico">⚙️</span> Perfil</a>
+        <a href="#/config"      class="nav-item" data-route><span class="ico">❓</span> Configurações</a>
+      </nav>
+    </aside>
+
+    <div class="main">
+      <header class="topbar">
+        <button class="hamburger" id="btnHamburger" aria-label="Abrir menu">☰</button>
+        <div class="logo">Professor<span class="plus">+</span></div>
+        <div class="topbar-actions">
+          <a href="#/perfil" class="toplink">Perfil</a>
+          <button id="btnSair" class="toplink btn-link">Sair</button>
+        </div>
+      </header>
+      <div class="content" id="content"></div>
+    </div>
+  </div>
+
+  <!-- Templates de telas -->
+  <template id="tpl-dashboard">
+    <section class="section">
+      <h1>Olá, Prof. Gilson!</h1>
+      <div class="kpis">
+        <div class="kpi-card"><div class="kpi-title">Total de Turmas</div><div class="kpi-value" id="kpiTurmas">0</div></div>
+        <div class="kpi-card"><div class="kpi-title">Total de Alunos</div><div class="kpi-value" id="kpiAlunos">0</div></div>
+        <div class="kpi-card"><div class="kpi-title">Atividades Hoje</div><div class="kpi-value" id="kpiAtividadesHoje">0</div></div>
+      </div>
+      <div class="grid-3 mt-16">
+        <a class="tile" href="#/turmas"><div class="tile-ico">🏠</div><div class="tile-title">Turmas</div></a>
+        <a class="tile" href="#/atividades"><div class="tile-ico">📋</div><div class="tile-title">Atividades</div></a>
+        <a class="tile" href="#/relatorios"><div class="tile-ico">📊</div><div class="tile-title">Relatórios</div></a>
+      </div>
+      <div class="mt-20">
+        <a class="btn btn-success" href="#/nova-turma" id="btnAtalhoNovaTurma">Nova Turma</a>
+      </div>
+    </section>
+  </template>
+
+  <template id="tpl-turmas">
+    <section class="section">
+      <div class="section-header">
+        <div class="logo small">Professor<span class="plus">+</span></div>
+        <button class="btn btn-success" id="btnNovaTurma">Nova Turma</button>
+      </div>
+      <h1>Turmas</h1>
+      <div id="listaTurmas" class="list list-turmas"></div>
+    </section>
+  </template>
+
+  <template id="tpl-detalhe-turma">
+    <section class="section">
+      <div class="section-header">
+        <div class="logo small">Professor<span class="plus">+</span></div>
+        <div class="user-mini" id="nomeUsuarioTop"></div>
+      </div>
+      <h1 class="mb-8" id="tituloTurma"></h1>
+
+      <div class="tabs">
+        <button class="tab active" data-tab="alunos">Alunos</button>
+        <button class="tab" data-tab="atividades">Atividades</button>
+        <button class="tab" data-tab="chamada">Chamada</button>
+      </div>
+
+      <div class="tabpanes">
+        <div class="tabpane active" id="paneAlunos">
+          <button class="btn btn-success mb-12" id="btnNovoAluno">+ Novo Aluno</button>
+          <div id="listaAlunos" class="list"></div>
+        </div>
+        <div class="tabpane" id="paneAtividades">
+          <button class="btn btn成功 mb-12" id="btnNovaAtividade">+ Nova Atividade</button>
+          <div id="listaAtividades" class="list"></div>
+        </div>
+        <div class="tabpane" id="paneChamada">
+          <div id="chamadaData" class="muted mb-8"></div>
+          <div id="listaChamada" class="list"></div>
+          <button class="btn btn-success mt-16" id="btnSalvarChamada">Salvar Chamada</button>
+        </div>
+      </div>
+    </section>
+  </template>
+
+  <template id="tpl-lancar-notas">
+    <section class="section">
+      <div class="section-header">
+        <div class="logo small">Professor<span class="plus">+</span></div>
+        <div class="user-mini" id="lancarUser"></div>
+      </div>
+      <h1>Lançar Notas</h1>
+      <div class="muted mb-12" id="contextoLancar"></div>
+      <div id="listaLancar" class="list list-grades"></div>
+      <button class="btn btn-success mt-16" id="btnSalvarNotas">Salvar Notas</button>
+    </section>
+  </template>
+
+  <template id="tpl-atividades">
+    <section class="section">
+      <div class="section-header">
+        <div class="logo small">Professor<span class="plus">+</span></div>
+        <a class="btn btn-success" href="#/nova-atividade" id="btnNovaAtividadeGlobal">Nova Atividade</a>
+      </div>
+      <h1>Atividades</h1>
+      <div id="atividadesGlobais" class="list"></div>
+    </section>
+  </template>
+
+  <template id="tpl-relatorios">
+    <section class="section">
+      <div class="section-header">
+        <div class="logo small">Professor<span class="plus">+</span></div>
+      </div>
+      <h1>Relatórios</h1>
+      <div class="filters">
+        <label>Turma
+          <select id="filtroTurma"></select>
+        </label>
+        <label>Período
+          <select id="filtroPeriodo">
+            <option value="30">Últimos 30 dias</option>
+            <option value="60">Últimos 60 dias</option>
+            <option value="90">Últimos 90 dias</option>
+          </select>
+        </label>
+        <button class="btn btn-teal" id="btnExportPDF">Exportar PDF</button>
+        <button class="btn btn-teal" id="btnExportExcel">Exportar Excel</button>
+      </div>
+      <div class="grid-2 mt-16">
+        <div class="card"><h3>Presença por turma</h3><div id="chartPresenca"></div></div>
+        <div class="card"><h3>Média das notas</h3><div id="chartMedias"></div>
+          <div class="legend"><div><span class="dot"></span>Abaixo da média</div><div><span class="dot"></span>Acima da média</div><div><span class="dot"></span>Média</div><div><span class="dot"></span>Excelente</div></div>
+        </div>
+      </div>
+    </section>
+  </template>
+
+  <template id="tpl-estatisticas">
+    <section class="section"><h1>Estatísticas</h1><p class="muted">Resumo geral (demo).</p></section>
+  </template>
+
+  <template id="tpl-perfil">
+    <section class="section">
+      <h1>Perfil</h1>
+      <label class="form"><span>Seu nome</span><input type="text" id="inpNome" placeholder="Prof. Gilson"/></label>
+      <button class="btn btn-success mt-12" id="btnSalvarPerfil">Salvar</button>
+    </section>
+  </template>
+
+  <template id="tpl-config">
+    <section class="section">
+      <h1>Configurações</h1>
+      <button class="btn btn-outline" id="btnReset">Limpar dados (localStorage)</button>
+    </section>
+  </template>
+
+  <script src="app.js"></script>
+</body>
+</html>
