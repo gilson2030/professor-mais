@@ -9,14 +9,13 @@ body{margin:0;font-family:"Segoe UI",system-ui,Arial,sans-serif;color:var(--text
 .hidden{display:none}
 .centered{display:flex;align-items:center;justify-content:center;min-height:100vh}
 .card{background:var(--card);border-radius:16px;box-shadow:0 8px 24px rgba(15,45,74,.12);padding:28px}
-.login-card{width:min(420px,92vw);text-align:center}
+.login-card{width:min(480px,92vw);text-align:center}
 .logo-big{font-size:40px;font-weight:700;color:var(--navy)}
 .plus{color:#1ed760;font-weight:800}
 .mt-12{margin-top:12px}.mt-16{margin-top:16px}.mt-20{margin-top:20px}.mb-8{margin-bottom:8px}.mb-12{margin-bottom:12px}
 
-/* App layout */
 .app{display:flex;min-height:100vh}
-.sidebar{width:280px;background:#0e1f32;color:#d7e2ef;padding:24px 18px;position:sticky;top:0;height:100vh;overflow:auto}
+.sidebar{width:300px;background:#0e1f32;color:#d7e2ef;padding:24px 18px;position:sticky;top:0;height:100vh;overflow:auto}
 .sidebar-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px}
 .profile-name{font-size:24px;font-weight:700}
 .nav{display:flex;flex-direction:column;gap:8px}
@@ -33,11 +32,10 @@ body{margin:0;font-family:"Segoe UI",system-ui,Arial,sans-serif;color:var(--text
 .hamburger{display:none;background:none;border:none;color:#fff;font-size:22px}
 
 .content{padding:20px}
-.section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px; gap:12px; flex-wrap:wrap}
 .logo.small{font-weight:800;color:#fff;background:var(--navy);padding:10px 14px;border-radius:12px;font-size:18px;display:inline-block}
 h1{font-size:32px;margin:12px 0} h3{margin:8px 0 12px}
 
-/* KPIs & tiles */
 .kpis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
 .kpi-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:16px;box-shadow:0 4px 10px rgba(20,57,95,.06)}
 .kpi-title{color:var(--muted);font-size:14px}
@@ -47,23 +45,21 @@ h1{font-size:32px;margin:12px 0} h3{margin:8px 0 12px}
 .tile{background:var(--navy);color:#fff;text-decoration:none;padding:22px;border-radius:16px;display:flex;align-items:center;gap:14px;box-shadow:0 8px 22px rgba(15,45,74,.18)}
 .tile-ico{font-size:28px}.tile-title{font-size:20px;font-weight:700}
 
-/* Lists */
 .list{display:flex;flex-direction:column;gap:10px}
-.list-turmas .row{display:flex;align-items:center;justify-content:space-between;background:var(--card);border:1px solid var(--border);padding:16px;border-radius:12px}
+.list-turmas .row{display:flex;align-items:center;justify-content:space-between;background:var(--card);border:1px solid var(--border);padding:16px;border-radius:12px;gap:12px;flex-wrap:wrap}
 .row-title{font-weight:800;font-size:20px}
 .row-sub{color:var(--muted);font-size:14px}
-.row-actions{display:flex;gap:10px;align-items:center}
-.action{background:none;border:none;cursor:pointer;color:#5d748f;font-size:18px}
+.row-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.action{background:none;border:1px solid var(--border);border-radius:8px;padding:8px 10px;cursor:pointer;color:#2d4462;font-size:14px}
 
-/* Tabs */
-.tabs{display:flex;gap:12px;margin-top:8px}
+.tabs{display:flex;gap:12px;margin-top:8px;flex-wrap:wrap}
 .tab{background:#eef3f8;border:none;padding:10px 14px;border-radius:10px;cursor:pointer}
 .tab.active{background:#dbe9f6;color:var(--navy)}
 .tabpanes{margin-top:12px}.tabpane{display:none}.tabpane.active{display:block}
 
-/* Forms & buttons */
 .form{display:flex;flex-direction:column;gap:6px;margin:8px 0}
-input[type="text"],input[type="number"],select{width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:10px;outline:none;font-size:16px;background:#fff}
+input[type="text"],input[type="email"],input[type="password"],input[type="number"],input[type="time"],input[type="date"],select{
+  width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:10px;outline:none;font-size:16px;background:#fff}
 .btn{border:none;border-radius:10px;padding:12px 16px;cursor:pointer;font-weight:700}
 .btn-primary{background:var(--navy);color:#fff}
 .btn-success{background:var(--green);color:#fff}
@@ -72,11 +68,17 @@ input[type="text"],input[type="number"],select{width:100%;padding:10px 12px;bord
 .btn-google{background:#fff;border:1px solid var(--border);color:#2c3240}
 .btn.xs{padding:6px 10px;font-size:12px}
 
-/* Grades & chamada */
-.list-grades .grade-row{display:grid;grid-template-columns:1fr 180px 40px;gap:12px;align-items:center;background:var(--card);border:1px solid var(--border);padding:12px;border-radius:12px}
+.table-responsive{width:100%;overflow:auto}
+.table{width:100%;border-collapse:separate;border-spacing:0 8px}
+.table thead th{text-align:left;color:var(--muted);font-weight:600;font-size:14px}
+.table tbody tr{background:var(--card);border:1px solid var(--border)}
+.table th,.table td{padding:10px 12px}
+.table tbody tr td:last-child{white-space:nowrap}
+
+.list-grades .grade-row{display:grid;grid-template-columns:40px 1fr 180px 160px;gap:12px;align-items:center;background:var(--card);border:1px solid var(--border);padding:12px;border-radius:12px}
 .note-input{width:100%}
 .comment-ico{font-size:18px;color:#6a7f98}
-.chamada-row{display:grid;grid-template-columns:1fr repeat(3,90px);gap:8px;align-items:center;background:var(--card);border:1px solid var(--border);padding:12px;border-radius:12px}
+.chamada-row{display:grid;grid-template-columns:1fr repeat(3,100px);gap:8px;align-items:center;background:var(--card);border:1px solid var(--border);padding:12px;border-radius:12px}
 .btn-pill{padding:8px 10px;border-radius:10px;border:1px solid var(--border);background:#f3f7fb;cursor:pointer}
 .btn-pill.active{background:var(--green);color:#fff;border-color:var(--green)}
 
@@ -89,12 +91,15 @@ input[type="text"],input[type="number"],select{width:100%;padding:10px 12px;bord
 
 .muted{color:var(--muted)} .user-mini{color:#fff;background:var(--navy);padding:8px 12px;border-radius:10px}
 
-/* Responsive */
-@media (max-width:980px){
+/* Responsivo */
+@media (max-width:1080px){
   .grid-3{grid-template-columns:1fr}
   .grid-2{grid-template-columns:1fr}
   .kpis{grid-template-columns:1fr}
-  .sidebar{position:fixed;left:-100%;transition:left .25s ease}
+}
+@media (max-width:980px){
+  .sidebar{position:fixed;left:-100%;transition:left .25s ease;z-index:20}
   .sidebar.open{left:0}
   .hamburger{display:inline-block}
+  .content{padding:14px}
 }
