@@ -1,385 +1,306 @@
-// ======= AUTH & STATE =======
-const STORE_KEY = "professor_plus_v1";
-const AUTH_KEY  = "pp_auth";
+// app.js — UI + Router com responsividade, CRUD completo, bimestres, médias, horários e estatísticas
+import {
+  auth, watchAuth, loginGoogle, loginEmail, signupEmail, logout,
+  ensureUser,
+  listTurmas, createTurma, updateTurma, deleteTurma,
+  listAlunos, addAluno, updateAluno, deleteAluno,
+  listAtividades, addAtividade, getNotas, saveNotas,
+  getChamada, saveChamada, listChamadaDocs,
+  listHorarios, addHorario, deleteHorario
+} from "./db.js";
 
-const seed = {
-  usuario: { nome: "Prof. Gilson" },
-  turmas: [
-    { id:"t1", nome:"Matemática", serie:"2ª série", turno:"Manhã" },
-    { id:"t2", nome:"História",   serie:"1ª série", turno:"Tarde" },
-    { id:"t3", nome:"Geografia",  serie:"3ª série", turno:"Noite" },
-    { id:"t4", nome:"Português",  serie:"4ª série", turno:"Manhã" }
-  ],
-  alunos:{
-    t1:["Ana Lima","Bruno Almeida","Carla Andrade","Daniel Melo","Fernanda Souza"],
-    t2:["Alice Souza","Bruno Almeida","Carla Ferreira","Diego Martins","Ester Rodrigues"],
-    t3:["Rafa Santos","Marina Souza","Caio Lima"],
-    t4:["Paula Seixas","Gustavo Reis"]
-  },
-  atividades:{
-    t1:[
-      { id:"a1", titulo:"Prova de Geometria", data:"2024-04-20" },
-      { id:"a2", titulo:"Trabalho: História da Matemática", data:"2024-04-10" },
-      { id:"a3", titulo:"Avaliação Bimestral", data:"2024-04-05" }
-    ]
-  },
-  notas:{},      // { turmaId: { atividadeId: { aluno: nota } } }
-  chamada:{}     // { turmaId: { ISODate: { aluno: status } } }
-};
-
-function load(){
-  const raw = localStorage.getItem(STORE_KEY);
-  if(!raw){ localStorage.setItem(STORE_KEY, JSON.stringify(seed)); return JSON.parse(JSON.stringify(seed)); }
-  try { return JSON.parse(raw); } catch { return JSON.parse(JSON.stringify(seed)); }
-}
-function save(){ localStorage.setItem(STORE_KEY, JSON.stringify(state)); }
-function isAuthed(){ return !!localStorage.getItem(AUTH_KEY); }
-function setAuth(on){ if(on) localStorage.setItem(AUTH_KEY,"1"); else localStorage.removeItem(AUTH_KEY); }
-
-let state = load();
-
-// ======= HELPERS =======
-const $  = (s,root=document)=>root.querySelector(s);
+const $ = (s,root=document)=>root.querySelector(s);
 const $$ = (s,root=document)=>[...root.querySelectorAll(s)];
-const fmtTurma = t => `${t.nome} – ${t.serie} • ${t.turno}`;
-const todayISO = () => new Date().toISOString().slice(0,10);
-const byId = (arr,id) => arr.find(x=>x.id===id);
 
-// ======= ELEMENTS =======
-const loginScreen = $("#login-screen");
-const appEl   = $("#app");
 const content = $("#content");
+const loginScreen = $("#login-screen");
+const appEl = $("#app");
 const sidebar = $("#sidebar");
-$("#btnHamburger").onclick = () => sidebar.classList.toggle("open");
-$("#btnSair").onclick = ()=>{ setAuth(false); location.hash="#/login"; };
-$("#btnLoginGoogle").onclick = doLogin;
-$("#btnLoginEmail").onclick = doLogin;
+const navEl = $("#nav");
+const authMsg = $("#authMsg");
 
-function doLogin(){
-  setAuth(true);
-  $("#perfilNome").textContent = state.usuario.nome || "Prof. Gilson";
-  location.hash = "#/dashboard";
-}
+function msg(t){ authMsg.textContent = t || ""; }
+function todayISO(){ return new Date().toISOString().slice(0,10); }
+function highlight(path){ $$("[data-route]").forEach(a=>a.classList.toggle("active", a.getAttribute("href")===`#${path}`)); }
+function closeSidebarOnMobile(){ if(window.innerWidth<=980) sidebar.classList.remove("open"); }
 
-// ======= ROUTER =======
-const routes = {
-  "/login": renderLogin,
-  "/dashboard": renderDashboard,
-  "/turmas": renderTurmas,
-  "/turma": p => renderDetalheTurma(p.id),
-  "/atividades": renderAtividadesGlobais,
-  "/lancar": p => renderLancarNotas(p.turma, p.atividade),
-  "/relatorios": renderRelatorios,
-  "/estatisticas": renderEstatisticas,
-  "/perfil": renderPerfil,
-  "/config": renderConfig,
-  "/nova-turma": () => { location.hash = "#/turmas"; setTimeout(()=> novaTurma(), 0); },
-  "/chamada": () => { const t=state.turmas[0]; renderDetalheTurma(t.id,"chamada"); }
+$("#btnHamburger").onclick = ()=> sidebar.classList.toggle("open");
+// fecha menu ao clicar em qualquer item
+navEl.addEventListener("click", (e)=>{ const a = e.target.closest("a[data-route]"); if(a){ closeSidebarOnMobile(); }});
+
+let currentUser = null;
+
+/* ======= Login ======= */
+$("#btnLoginGoogle").onclick = async ()=>{ try{ await loginGoogle(); }catch(e){ msg(traduz(e)); } };
+$("#btnLoginEmail").onclick = async ()=>{
+  try{
+    msg("Entrando...");
+    const email = $("#inpEmail").value.trim();
+    const pass  = $("#inpPass").value;
+    if(!email || !pass) return msg("Informe e-mail e senha.");
+    await loginEmail(email, pass);
+    msg("");
+  }catch(e){ msg(traduz(e)); }
 };
+$("#btnSignupEmail").onclick = async ()=>{
+  try{
+    const email = $("#inpEmail").value.trim();
+    const pass  = $("#inpPass").value;
+    if(!email || !pass) return msg("Informe e-mail e senha para cadastrar.");
+    const nome = prompt("Seu nome para exibir (opcional):") || "Professor";
+    await signupEmail(email, pass, nome);
+    msg("Conta criada. Você já está logado.");
+  }catch(e){ msg(traduz(e)); }
+};
+$("#btnSair").onclick = async ()=>{ await logout(); location.hash="#/login"; };
 
-window.addEventListener("hashchange", handleRoute);
-document.addEventListener("DOMContentLoaded", () => {
-  if(!location.hash) location.hash = isAuthed() ? "#/dashboard" : "#/login";
-  handleRoute();
-});
-
-function parseHash(){
-  const [path, query] = location.hash.replace("#","").split("?");
-  const params = Object.fromEntries(new URLSearchParams(query||"").entries());
-  return { path, params };
-}
-
-function handleRoute(){
-  const { path, params } = parseHash();
-
-  // Protege rotas
-  if(path !== "/login" && !isAuthed()){
-    location.replace("#/login");
-    return;
+// auth watcher
+watchAuth(async (user)=>{
+  currentUser = user;
+  if(user){
+    await ensureUser(user.uid, user.displayName);
+    $("#perfilNome").textContent = user.displayName || "Professor";
+    showApp();
+    if(!location.hash || location.hash==="#/login") location.hash = "#/dashboard";
+    handleRoute();
+  } else {
+    showLogin();
+    location.hash = "#/login";
   }
-
-  // Alterna exibição app x login
-  if(path === "/login"){ showLogin(); }
-  else { showApp(); }
-
-  // Render
-  (routes[path] || renderDashboard)(params);
-
-  // Destaque no menu
-  $$("[data-route]").forEach(a => a.classList.toggle("active", a.getAttribute("href") === `#${path}`));
-}
+});
 
 function showLogin(){ loginScreen.classList.remove("hidden"); appEl.classList.add("hidden"); }
 function showApp(){ loginScreen.classList.add("hidden"); appEl.classList.remove("hidden"); }
 
-// ======= DASHBOARD =======
-function renderDashboard(){
-  content.innerHTML = "";
-  content.appendChild($("#tpl-dashboard").content.cloneNode(true));
-  $("#kpiTurmas").textContent = state.turmas.length;
-  const totalAlunos = Object.values(state.alunos).reduce((s,a)=>s+a.length,0);
-  $("#kpiAlunos").textContent = totalAlunos;
+/* ======= Router ======= */
+const routes = {
+  "/login": ()=>{},
+  "/dashboard": renderDashboard,
+  "/turmas": renderTurmas,
+  "/alunos": renderAlunosGeral,
+  "/turma": p => renderDetalheTurma(p.id),
+  "/lancar": p => renderLancarNotas(p.turma, p.atividade),
+  "/atividades": renderAtividadesGlobais,
+  "/relatorios": renderRelatorios,
+  "/estatisticas": renderEstatisticas,
+  "/perfil": renderPerfil,
+  "/config": renderConfig,
+  "/nova-turma": ()=>{ location.hash="#/turmas"; setTimeout(()=> novaTurma(),0); },
+  "/chamada": async ()=>{ const ts = await listTurmas(currentUser.uid); if(ts[0]) renderChamadaSelector(ts[0].id); }
+};
+window.addEventListener("hashchange", handleRoute);
+document.addEventListener("DOMContentLoaded", ()=>{ if(!location.hash) location.hash="#/login"; handleRoute(); });
 
-  const hoje = todayISO();
-  let hojeCount = 0;
-  Object.values(state.atividades).forEach(list=> list.forEach(a=>{ if(a.data===hoje) hojeCount++; }));
-  $("#kpiAtividadesHoje").textContent = hojeCount;
+function parseHash(){
+  const [path,q] = (location.hash||"#/login").replace("#","").split("?");
+  return { path, params: Object.fromEntries(new URLSearchParams(q||"").entries()) };
+}
+function handleRoute(){
+  const { path, params } = parseHash();
+  if(path !== "/login" && !auth.currentUser){ showLogin(); return; }
+  if(path === "/login"){ showLogin(); (routes[path]||(()=>{}))(params); return; }
+  showApp(); (routes[path]||renderDashboard)(params); highlight(path);
 }
 
-// ======= TURMAS =======
-function renderTurmas(){
-  content.innerHTML = "";
-  content.appendChild($("#tpl-turmas").content.cloneNode(true));
+/* ======= DASHBOARD + HORÁRIOS ======= */
+async function renderDashboard(){
+  content.innerHTML=""; content.appendChild($("#tpl-dashboard").content.cloneNode(true));
+  $("#dashNome").textContent = auth.currentUser?.displayName || "Professor";
+
+  const turmas = await listTurmas(currentUser.uid);
+  $("#kpiTurmas").textContent = turmas.length;
+
+  let totalAlunos = 0;
+  for(const t of turmas){ totalAlunos += (await listAlunos(currentUser.uid, t.id)).length; }
+  $("#kpiAlunos").textContent = totalAlunos;
+
+  let hojeCount = 0;
+  for(const t of turmas){
+    const atvsHoje = (await listAtividades(currentUser.uid, t.id)).filter(a=>a.data===todayISO());
+    hojeCount += atvsHoje.length;
+  }
+  $("#kpiAtividadesHoje").textContent = hojeCount;
+
+  // Horários
+  const tbody = $("#tblHorarios tbody");
+  const horarios = await listHorarios(currentUser.uid);
+  tbody.innerHTML = "";
+  for(const h of horarios){
+    const turma = turmas.find(t=>t.id===h.turmaId);
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${h.dia}</td><td>${h.inicio}</td><td>${h.fim}</td>
+      <td>${turma ? turma.nome : "-"}</td>
+      <td>${h.disciplina||"-"}</td>
+      <td><button class="action" data-del="${h.id}">Excluir</button></td>`;
+    tbody.appendChild(tr);
+  }
+  tbody.addEventListener("click", async (e)=>{
+    const id = e.target.dataset.del;
+    if(id && confirm("Excluir horário?")){ await deleteHorario(currentUser.uid, id); renderDashboard(); }
+  });
+
+  $("#btnNovoHorario").onclick = async ()=>{
+    if(!turmas.length){ alert("Crie uma turma antes."); return; }
+    const dia = prompt("Dia (ex: Segunda)"); if(!dia) return;
+    const inicio = prompt("Início (HH:MM)","07:00"); if(!inicio) return;
+    const fim = prompt("Fim (HH:MM)","07:50"); if(!fim) return;
+    const turmaNome = prompt("Turma (digite o nome exatamente como cadastrado)","");
+    const turmaSel = turmas.find(t=>t.nome===turmaNome) || turmas[0];
+    const disciplina = prompt("Disciplina","Matemática") || "Matemática";
+    await addHorario(currentUser.uid, { dia, inicio, fim, turmaId: turmaSel.id, disciplina });
+    renderDashboard();
+  };
+}
+
+/* ======= TURMAS (CRUD) ======= */
+async function renderTurmas(){
+  content.innerHTML=""; content.appendChild($("#tpl-turmas").content.cloneNode(true));
   $("#btnNovaTurma").onclick = novaTurma;
 
-  const list = $("#listaTurmas"); list.innerHTML = "";
-  state.turmas.forEach(t=>{
-    const row = document.createElement("div");
-    row.className = "row";
-    row.innerHTML = `
+  const list = $("#listaTurmas");
+  const turmas = await listTurmas(currentUser.uid);
+  list.innerHTML="";
+  turmas.forEach(t=>{
+    const row=document.createElement("div"); row.className="row";
+    row.innerHTML=`
       <div>
         <div class="row-title">${t.nome}</div>
         <div class="row-sub">${t.serie} • ${t.turno}</div>
       </div>
       <div class="row-actions">
-        <a class="action" title="Ver" href="#/turma?id=${t.id}">👁️</a>
-        <button class="action" title="Editar" onclick="alert('Edição simples via prompt em próxima versão')">✏️</button>
+        <a class="action" href="#/turma?id=${t.id}">Ver</a>
+        <button class="action" data-edit="${t.id}">Editar</button>
+        <button class="action" data-del="${t.id}">Excluir</button>
       </div>`;
     list.appendChild(row);
   });
-}
 
-function novaTurma(){
-  const nome  = prompt("Nome da turma (ex: Matemática):");
-  if(!nome) return;
-  const serie = prompt("Série (ex: 2ª série):","2ª série") || "2ª série";
-  const turno = prompt("Turno (ex: Manhã):","Manhã") || "Manhã";
-  state.turmas.push({ id: crypto.randomUUID(), nome, serie, turno });
-  state.alunos = state.alunos || {};
-  save();
+  list.onclick = async (e)=>{
+    const tid = e.target.dataset.edit;
+    if(tid){
+      const t = turmas.find(x=>x.id===tid);
+      const nome  = prompt("Nome da turma:", t.nome) || t.nome;
+      const serie = prompt("Série:", t.serie) || t.serie;
+      const turno = prompt("Turno:", t.turno) || t.turno;
+      await updateTurma(currentUser.uid, tid, { nome, serie, turno });
+      renderTurmas(); return;
+    }
+    const del = e.target.dataset.del;
+    if(del && confirm("Excluir turma? (alunos/atividades não são apagados nesta versão)")){
+      await deleteTurma(currentUser.uid, del);
+      renderTurmas();
+    }
+  };
+}
+async function novaTurma(){
+  const nome  = prompt("Nome da turma:"); if(!nome) return;
+  const serie = prompt("Série:","2ª série") || "2ª série";
+  const turno = prompt("Turno:","Manhã") || "Manhã";
+  await createTurma(currentUser.uid, { nome, serie, turno });
   renderTurmas();
 }
 
-// ======= DETALHE DA TURMA =======
-function renderDetalheTurma(turmaId, initialTab="alunos"){
-  const turma = byId(state.turmas, turmaId) || state.turmas[0];
-  content.innerHTML = "";
-  content.appendChild($("#tpl-detalhe-turma").content.cloneNode(true));
+/* ======= ALUNOS (GERAL) ======= */
+async function renderAlunosGeral(){
+  content.innerHTML=""; content.appendChild($("#tpl-alunos").content.cloneNode(true));
+  const wrap = $("#wrapAlunosPorTurma");
+  wrap.innerHTML = "";
+  const turmas = await listTurmas(currentUser.uid);
 
-  $("#nomeUsuarioTop").textContent = state.usuario.nome || "Gilson";
+  for(const t of turmas){
+    const box = document.createElement("div");
+    box.className = "card";
+    box.innerHTML = `<h3>${t.nome} — ${t.serie} • ${t.turno}</h3>
+      <div class="row-actions mb-12">
+        <button class="action" data-add="${t.id}">+ Inserir aluno</button>
+      </div>
+      <div class="table-responsive">
+        <table class="table">
+          <thead><tr><th>#</th><th>Nome</th><th>Ações</th></tr></thead>
+          <tbody id="tb-${t.id}"></tbody>
+        </table>
+      </div>`;
+    wrap.appendChild(box);
+
+    const alunos = (await listAlunos(currentUser.uid, t.id)).sort((a,b)=>a.nome.localeCompare(b.nome));
+    const tbody = box.querySelector("tbody");
+    alunos.forEach((a,i)=>{
+      const tr=document.createElement("tr");
+      tr.innerHTML = `<td>${i+1}</td><td>${a.nome}</td>
+        <td>
+          <button class="action" data-edit="${t.id}:${a.id}">Editar</button>
+          <button class="action" data-del="${t.id}:${a.id}">Excluir</button>
+        </td>`;
+      tbody.appendChild(tr);
+    });
+  }
+
+  wrap.onclick = async (e)=>{
+    if(e.target.dataset.add){
+      const tid = e.target.dataset.add;
+      const nome = prompt("Nome do aluno:"); if(!nome) return;
+      await addAluno(currentUser.uid, tid, nome);
+      renderAlunosGeral(); return;
+    }
+    if(e.target.dataset.edit){
+      const [tid, aid] = e.target.dataset.edit.split(":");
+      const alunos = await listAlunos(currentUser.uid, tid);
+      const a = alunos.find(x=>x.id===aid);
+      const nome = prompt("Editar nome:", a.nome) || a.nome;
+      await updateAluno(currentUser.uid, tid, aid, { nome });
+      renderAlunosGeral(); return;
+    }
+    if(e.target.dataset.del){
+      const [tid, aid] = e.target.dataset.del.split(":");
+      if(confirm("Excluir aluno?")){ await deleteAluno(currentUser.uid, tid, aid); renderAlunosGeral(); }
+    }
+  };
+}
+
+/* ======= DETALHE DA TURMA: alunos/atividades/chamada ======= */
+async function renderDetalheTurma(turmaId, initialTab="alunos"){
+  content.innerHTML=""; content.appendChild($("#tpl-detalhe-turma").content.cloneNode(true));
+  $("#nomeUsuarioTop").textContent = auth.currentUser?.displayName || "Professor";
+
+  const turmas = await listTurmas(currentUser.uid);
+  const turma = turmas.find(t=>t.id===turmaId) || turmas[0];
   $("#tituloTurma").textContent = `${turma.nome} – ${turma.serie} – ${turma.turno}`;
 
-  // Tabs
+  // tabs
   $$(".tab").forEach(btn=>{
-    btn.onclick = ()=>{
+    btn.onclick=()=>{
       $$(".tab").forEach(b=>b.classList.remove("active"));
       $$(".tabpane").forEach(p=>p.classList.remove("active"));
       btn.classList.add("active");
       $(`#pane${btn.dataset.tab.charAt(0).toUpperCase()+btn.dataset.tab.slice(1)}`).classList.add("active");
     };
   });
-  if(initialTab!=="alunos"){ $(`.tab[data-tab="${initialTab}"]`).click(); }
+  if(initialTab!=="alunos") $(`.tab[data-tab="${initialTab}"]`).click();
 
-  // Alunos
-  const alunos = state.alunos[turma.id] || [];
-  const listaAlunos = $("#listaAlunos"); listaAlunos.innerHTML = "";
-  alunos.forEach(nome=>{
-    const r = document.createElement("div");
-    r.className = "row";
-    r.innerHTML = `<div class="row-title">${nome}</div>`;
-    listaAlunos.appendChild(r);
-  });
-  $("#btnNovoAluno").onclick = ()=>{
-    const nome = prompt("Nome do novo aluno:");
-    if(nome){ (state.alunos[turma.id] = state.alunos[turma.id] || []).push(nome); save(); renderDetalheTurma(turma.id,"alunos"); }
-  };
+  // Alunos (CRUD dentro da turma)
+  await renderAlunosTurmaSection(turma);
 
-  // Atividades
-  const listaAtv = $("#listaAtividades");
-  const atividades = (state.atividades[turma.id] || []).slice().sort((a,b)=> (a.data<b.data?1:-1));
-  listaAtv.innerHTML = "";
-  atividades.forEach(a=>{
-    const r = document.createElement("div");
-    r.className = "row";
-    r.innerHTML = `
-      <div>
-        <div class="row-title">${a.titulo}</div>
-        <div class="row-sub">${new Date(a.data).toLocaleDateString()}</div>
-      </div>
-      <div class="row-actions">
-        <a class="btn btn-primary" href="#/lancar?turma=${turma.id}&atividade=${a.id}">Lançar Notas</a>
-      </div>`;
-    listaAtv.appendChild(r);
-  });
-  $("#btnNovaAtividade").onclick = ()=>{
-    const titulo = prompt("Título da atividade:");
-    if(!titulo) return;
-    const data = prompt("Data (AAAA-MM-DD):", todayISO());
-    (state.atividades[turma.id] = state.atividades[turma.id] || []).push({ id: crypto.randomUUID(), titulo, data });
-    save(); renderDetalheTurma(turma.id,"atividades");
-  };
+  // Atividades + bimestre
+  const selBim = $("#selBimAtiv");
+  selBim.onchange = ()=> renderAtividadesTurma(turma.id, selBim.value);
+  await renderAtividadesTurma(turma.id, selBim.value);
 
-  // Chamada
-  $("#chamadaData").textContent = new Date().toLocaleDateString();
-  const listaChamada = $("#listaChamada"); listaChamada.innerHTML = "";
-  const dataKey = todayISO();
-  const reg = (((state.chamada||{})[turma.id]||{})[dataKey]) || {};
-  alunos.forEach(nome=>{
-    const row = document.createElement("div");
-    row.className = "chamada-row";
-    row.innerHTML = `
-      <div>${nome}</div>
-      <button class="btn-pill" data-val="presente">Presente</button>
-      <button class="btn-pill" data-val="falta">Falta</button>
-      <button class="btn-pill" data-val="justi">Justi.</button>`;
-    const [bP,bF,bJ] = row.querySelectorAll(".btn-pill");
-    const apply = (val)=>{ [bP,bF,bJ].forEach(b=>b.classList.remove("active"));
-      if(val==="presente") bP.classList.add("active");
-      if(val==="falta")    bF.classList.add("active");
-      if(val==="justi")    bJ.classList.add("active");
-      reg[nome]=val;
-    };
-    [bP,bF,bJ].forEach(b=> b.onclick = ()=> apply(b.dataset.val));
-    if(reg[nome]) apply(reg[nome]);
-    listaChamada.appendChild(row);
-  });
-  $("#btnSalvarChamada").onclick = ()=>{
-    state.chamada[turma.id] = state.chamada[turma.id] || {};
-    state.chamada[turma.id][dataKey] = reg;
-    save(); alert("Chamada salva!");
+  // Chamada (data livre)
+  const dateInp = $("#chamadaDate");
+  dateInp.value = todayISO();
+  await renderChamadaList(turma.id, dateInp.value);
+  dateInp.onchange = ()=> renderChamadaList(turma.id, dateInp.value);
+  $("#btnSalvarChamada").onclick = async ()=>{
+    const registros = collectChamadaFromUI();
+    await saveChamada(currentUser.uid, turma.id, dateInp.value, registros);
+    alert("Chamada salva!");
   };
 }
 
-// ======= LANÇAR NOTAS =======
-function renderLancarNotas(turmaId, atividadeId){
-  const turma = byId(state.turmas, turmaId);
-  if(!turma){ location.hash="#/turmas"; return; }
-  const atividade = (state.atividades[turmaId]||[]).find(a=>a.id===atividadeId);
-  content.innerHTML = "";
-  content.appendChild($("#tpl-lancar-notas").content.cloneNode(true));
-  $("#lancarUser").textContent = state.usuario.nome || "Gilson";
-  $("#contextoLancar").textContent = `${atividade?.titulo || "Atividade"} – ${fmtTurma(turma)}`;
-
-  const alunos = state.alunos[turmaId] || [];
-  const notasTurma = (state.notas[turmaId] = state.notas[turmaId] || {});
-  const notasAtividade = (notasTurma[atividadeId] = notasTurma[atividadeId] || {});
-  const list = $("#listaLancar"); list.innerHTML = "";
-
-  alunos.forEach(nome=>{
-    const row = document.createElement("div");
-    row.className = "grade-row";
-    const valor = notasAtividade[nome] ?? "";
-    row.innerHTML = `
-      <div>${nome}</div>
-      <input class="note-input" type="number" min="0" max="10" step="0.1" value="${valor}" />
-      <span class="comment-ico" title="Observação">💬</span>`;
-    const inp = row.querySelector("input");
-    inp.onchange = ()=> notasAtividade[nome] = Number(inp.value);
-    list.appendChild(row);
-  });
-
-  $("#btnSalvarNotas").onclick = ()=>{ save(); alert("Notas salvas!"); location.hash=`#/turma?id=${turmaId}`; };
-}
-
-// ======= ATIVIDADES (GLOBAL) =======
-function renderAtividadesGlobais(){
-  content.innerHTML = "";
-  content.appendChild($("#tpl-atividades").content.cloneNode(true));
-  const cont = $("#atividadesGlobais"); cont.innerHTML = "";
-  state.turmas.forEach(t=>{
-    (state.atividades[t.id]||[]).forEach(a=>{
-      const r = document.createElement("div");
-      r.className="row";
-      r.innerHTML = `
-        <div>
-          <div class="row-title">${a.titulo}</div>
-          <div class="row-sub">${fmtTurma(t)} — ${new Date(a.data).toLocaleDateString()}</div>
-        </div>
-        <div class="row-actions">
-          <a class="btn btn-primary" href="#/lancar?turma=${t.id}&atividade=${a.id}">Lançar Notas</a>
-        </div>`;
-      cont.appendChild(r);
-    });
-  });
-}
-
-// ======= RELATÓRIOS =======
-let chartPresenca, chartMedias;
-function renderRelatorios(){
-  content.innerHTML = "";
-  content.appendChild($("#tpl-relatorios").content.cloneNode(true));
-  $("#btnExportPDF").onclick = ()=> window.print();
-  $("#btnExportExcel").onclick = exportCSV;
-
-  const selTurma = $("#filtroTurma");
-  selTurma.innerHTML = `<option value="todas">Todas as turmas</option>` + state.turmas.map(t=>`<option value="${t.id}">${t.nome}</option>`).join("");
-  drawCharts();
-}
-
-function drawCharts(){
-  const labels = state.turmas.map(t=> t.nome.charAt(0));
-  const dataPresenca = state.turmas.map(t=>{
-    const alunos = state.alunos[t.id]||[];
-    const reg = (((state.chamada||{})[t.id]||{})[todayISO()])||{};
-    const presentes = Object.values(reg).filter(v=>v==="presente").length;
-    return alunos.length ? Math.round((presentes/alunos.length)*100) : 0;
-  });
-
-  if(chartPresenca) chartPresenca.destroy();
-  chartPresenca = new ApexCharts(document.querySelector("#chartPresenca"),{
-    chart:{type:"bar",height:280}, series:[{name:"Presença (%)",data:dataPresenca}],
-    xaxis:{categories:labels}, grid:{borderColor:"#eee"}
-  }); chartPresenca.render();
-
-  const faixas = { abaixo:0, media:0, acima:0, excelente:0 };
-  Object.values(state.notas).forEach(porAtv=>{
-    Object.values(porAtv).forEach(map=>{
-      Object.values(map).forEach(n=>{
-        if(n < 5) faixas.abaixo++;
-        else if(n < 7) faixas.media++;
-        else if(n < 9) faixas.acima++;
-        else faixas.excelente++;
-      });
-    });
-  });
-  const pie = [faixas.abaixo, faixas.acima, faixas.media, faixas.excelente];
-  if(chartMedias) chartMedias.destroy();
-  chartMedias = new ApexCharts(document.querySelector("#chartMedias"),{
-    chart:{type:"pie",height:280}, series:pie,
-    labels:["Abaixo da média","Acima da média","Média","Excelente"]
-  }); chartMedias.render();
-}
-function exportCSV(){
-  let csv = "Seção;Item;Valor\n";
-  state.turmas.forEach(t=>{
-    const alunos = state.alunos[t.id]||[];
-    csv += `Turma;${fmtTurma(t)};Alunos ${alunos.length}\n`;
-  });
-  csv += "\nNotas (turma/atividade/aluno/nota)\n";
-  Object.entries(state.notas).forEach(([tid, porAtv])=>{
-    Object.entries(porAtv).forEach(([aid,map])=>{
-      Object.entries(map).forEach(([aluno,nota])=>{
-        const turma = byId(state.turmas, tid);
-        const atv = (state.atividades[tid]||[]).find(a=>a.id===aid);
-        csv += `${fmtTurma(turma)};${atv?.titulo};${aluno};${nota}\n`;
-      });
-    });
-  });
-  const blob = new Blob([csv], {type:"text/csv;charset=utf-8;"});
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob); a.download = "relatorio_professor+.csv"; a.click();
-  URL.revokeObjectURL(a.href);
-}
-
-// ======= ESTATÍSTICAS / PERFIL / CONFIG =======
-function renderEstatisticas(){ content.innerHTML=""; content.appendChild($("#tpl-estatisticas").content.cloneNode(true)); }
-function renderPerfil(){
-  content.innerHTML=""; content.appendChild($("#tpl-perfil").content.cloneNode(true));
-  const inp = $("#inpNome"); inp.value = state.usuario.nome || "Prof. Gilson";
-  $("#btnSalvarPerfil").onclick = ()=>{ state.usuario.nome = inp.value || "Prof. Gilson"; save(); $("#perfilNome").textContent = state.usuario.nome; alert("Perfil salvo!"); };
-}
-function renderConfig(){
-  content.innerHTML=""; content.appendChild($("#tpl-config").content.cloneNode(true));
-  $("#btnReset").onclick = ()=>{ localStorage.removeItem(STORE_KEY); state = load(); alert("Dados limpos."); location.hash="#/dashboard"; };
-}
-function renderLogin(){ /* só para cumprir a rota; o showLogin já cuida da UI */ }
+async function renderAlunosTurmaSection(turma){
+  const lista = $("#listaAlunos"); lista.innerHTML="";
+  const alunos = (await listAlunos(currentUser.uid, turma.id)).sort((a,b)=>a.nome.localeCompare(b.nome));
+  alunos.forEach(a=>{
+    const row=document.createElement("div"); row.className="row";
+   
